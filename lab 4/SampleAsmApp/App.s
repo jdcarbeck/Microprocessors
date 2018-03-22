@@ -66,7 +66,7 @@ start
 	str	r1,[r0,#TCR]
 
 	mov	r1,#TimerResetAllInterrupts
-	str	r1,[r0,#IR]
+	str r1,[r0,#IR]
 
 	ldr	r1,=(14745600/200)-1	 ; 5 ms = 1/200 second
 	str	r1,[r0,#MR0]
@@ -162,7 +162,7 @@ irqhan	sub	lr,lr,#4
 	ADD R1, R0, #8 ;adjust the stact pointer to the apropriate place in the stack
 	STMFD R1!, {R2 - R12, LR}
 	LDMFD SP!, {R2 - R3} ;load the saved registers back
-	STMFD R0, {R0 - R1}
+	STMFD R0, {R2 - R3}
 	;the regs are now saved onto the thread stack
 
 ;this is where we stop the timer from making the interrupt request to the VIC
@@ -175,8 +175,12 @@ irqhan	sub	lr,lr,#4
 	mov	r1,#0
 	str	r1,[r0,#VectAddr]	; reset VIC
 
-;change into system mode
-	
+;change the mode
+	MRS R0, CPSR
+	LDR R1, =0x0000000F
+	ORR R0, R0, R1
+	MSR CPSR_cxsf, R0
+
 	
 ;go to next thread in array if end go to begining
 	LDR R0, =threads
