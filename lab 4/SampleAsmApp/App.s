@@ -31,11 +31,9 @@ IO1DIR	EQU	0xE0028018
 IO1SET	EQU	0xE0028014
 IO1CLR	EQU	0xE002801C
 IO1PIN	EQU	0xE0028010
-IODIR0	EQU	0xE0028008
-IOSET0	EQU	0xE0028004
-IOCLR0	EQU	0xE002800C
-IOPIN0  EQU 0xE0028000
-PINSEL0 EQU 0xE002C000
+IO0DIR	EQU	0xE0028008
+IO0SET	EQU	0xE0028004
+IO0CLR	EQU	0xE002800C
 
 
 	AREA	InitialisationAndMain, CODE, READONLY
@@ -99,7 +97,7 @@ floop	str	r3,[r2]	   	; clear the bit -> turn on the LED
 
 delay0
 	;delay for about a half second
-	ldr	R8,=0x2000000
+	ldr	R8,=0x5000000
 dloop0	subs	R8,R8,#1
 	bne	dloop0
 
@@ -114,36 +112,34 @@ dloop0	subs	R8,R8,#1
 
 ;thread1 will begin here the first time
 thread1Start
-	LDR R0,=PINSEL0
-	LDR R1,=0x00000000
-	STR R1,[R0]				;Select port 0 as GPIO mode
-	LDR R0,=IODIR0
-	LDR R1,=0X0000FF00		;Mask to select P.08 as start pin of output
-	STR R1, [R0]			
-	
-	LDR R4, =array			;array.address
-	LDR R5, =arrayN
-	LDR R5, [R5]			;arraySize
-reset	
-	LDR R6, =0				;counter
+	LDR	R1,=IO0DIR
+	LDR	R2,=0x0001B780
+;   0000 0000 0000 0001 1011 0111 1000 0000
+;   31   27   23   19   15   11   7    3
+	STR	R2,[R1]		
+	LDR	R1,=IO0SET
+	STR	R2,[R1]		
+	LDR	R2,=IO0CLR
 
+	LDR R3, =4
+	LDR R4, =ttb
+	LDR R5, =0x000FFFF0 ;all leds
+restart
+	LDR	R6, =15    		;end of table
+	MUL R7, R6, R3		; multiply by 4 for memory sized jumpe
 while
-	CMP R6, R5				;while(counter<=arraySize)
-	BGE reset
-	
-	LDR R2,=IOSET0			;Set address
-	LDR R3, [R4, R6, LSL #2];value = valAt(array.startAddress+offset)
-	STR R3,[R2]				;Make pin = value
-
-delay1
-	;delay for about a half second
-	ldr	R8,=0x2000000
-dloop1	subs	R8,R8,#1
-	bne	dloop1
-	
-	LDR R2,=IOCLR0			;Clear address
-	STR R3, [R2]			;Clear pins
-	ADD R6, R6, #1			;counter++
+	CMP R6, #0			;for loop counting down from 15
+	BLT restart
+	ADD R8, R4, R7		;start of table plus memory offset
+	LDR R8, [R4, R7]	;load value from table
+	STR R5, [R2]		;turn off all led that are on
+	STR R8, [R1]		;turn on bits specified by value
+;delay for about a half second
+	LDR	R9, =5000000
+dloop	SUBS	R9, R9, #1
+	BNE	dloop
+	SUB R6, R6, #1
+	SUB R7, R7, #4
 	B while
 
 stop	b	stop  		; branch always
@@ -159,10 +155,11 @@ irqhan	sub	lr,lr,#4
 	LSL R1, R1, #2
 	ADD R0, R0, R1
 	;R0 contains the pointer to the thread stack of current process
-	ADD R1, R0, #8 ;adjust the stact pointer to the apropriate place in the stack
-	STMFD R1!, {R2 - R12, LR}
+	;ADD R1, R0, #8 ;adjust the stact pointer to the apropriate place in the stack
+	LDR R0, [R0]
+	STMFA R0, {R2 - R12, LR}
 	LDMFD SP!, {R2 - R3} ;load the saved registers back
-	STMFD R0, {R2 - R3}
+	STMFA R0, {R2 - R3}
 	;the regs are now saved onto the thread stack
 
 ;this is where we stop the timer from making the interrupt request to the VIC
@@ -186,26 +183,26 @@ irqhan	sub	lr,lr,#4
 	LDR R0, =threads
 	LDR R1, =threadIndex
 	LDR R2, =threadNum
-	LDR R1, [R1]
+	LDR R3, [R1]
 	LDR R2, [R2]
-	ADD R1, R1, #1
-	CMP R1, R2
+	ADD R3, R3, #1
+	CMP R3, R2
 	BLT endIterate
-	LDR R1, =0
+	LDR R3, =0
 endIterate
+	STR R3, [R1]
 
 ;changes to the next stack pointer 
-	LSL R1, R1, #2
-	ADD R0, R0, R1
+	LSL R3, R3, #2
+	ADD R0, R0, R3
+	LDR R0, [R0]
 	;R0 is now the pointer to the next thread stack
 	MOV R1, R0
 	LDR R2, =13
 	LDR R4, [R0, R2, LSL #2] ;load the pc to R4
-	LDMFD R1!, {R2 - R3}
+	LDMFA R0, {R2 - R3}
 	STMFD SP!, {R2 - R4} ; stores R0 - R1 and the PC
-	;adjust to thread stack to R2
-	ADD R0, R0, #8
-	LDMFD R0!, {R2 - R12} ;Load the saved registers of the thread stack
+	LDMFA R0, {R2 - R12} ;Load the saved registers of the thread stack
 	LDMFD SP!, {R0 - R1, PC} ;load the rest of the registers and change the program counter
 
 	AREA	Subroutines, CODE, READONLY
@@ -213,9 +210,7 @@ endIterate
 	AREA	Stuff, DATA, READWRITE
 	
 	
-arrayN	DCD	16
-
-array	DCD	0x00003F00,0x00000600,0x00005B00,0x00004F00,0x00006600,0x00006D00,0x00007D00,0x00000700,0x00007F00,0x00006F00,0x00007700,0x00007C00,0x00003900,0x00005E00,0x00007900, 0x00007100
+ttb DCD 0x00003780,0x00000300,0x00009580,0x00008780,0x0000A300,0x0000A680,0x0000B680,0x00000380,0x0000B780,0x0000A380,0x0000B380,0x0000B600,0x00003480,0x0009700,0x0000B480,0x0000B080	
 
 	
 thread0 DCD 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, thread0Start ;last element is the pc of the thread
