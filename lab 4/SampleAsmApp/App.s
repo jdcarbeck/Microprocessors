@@ -97,7 +97,7 @@ floop	str	r3,[r2]	   	; clear the bit -> turn on the LED
 
 delay0
 	;delay for about a half second
-	ldr	R8,=0x5000000
+	ldr	R8,=0x2000000
 dloop0	subs	R8,R8,#1
 	bne	dloop0
 
@@ -135,7 +135,7 @@ while
 	STR R5, [R2]		;turn off all led that are on
 	STR R8, [R1]		;turn on bits specified by value
 ;delay for about a half second
-	LDR	R9, =5000000
+	LDR	R9, =2000000
 dloop	SUBS	R9, R9, #1
 	BNE	dloop
 	SUB R6, R6, #1
@@ -157,28 +157,18 @@ irqhan	sub	lr,lr,#4
 	;R0 contains the pointer to the thread stack of current process
 	;ADD R1, R0, #8 ;adjust the stact pointer to the apropriate place in the stack
 	LDR R0, [R0]
-	STMFA R0, {R2 - R12, LR}
+	ADD R1, R0, #8
+	STMEA R1, {R2 - R12, LR}
 	LDMFD SP!, {R2 - R3} ;load the saved registers back
-	STMFA R0, {R2 - R3}
+	STMEA R0, {R2 - R3}
 	;the regs are now saved onto the thread stack
 
-;this is where we stop the timer from making the interrupt request to the VIC
-	ldr	r0,=T0
-	mov	r1,#TimerResetTimer0Interrupt
-	str	r1,[r0,#IR]	   	; remove MR0 interrupt request from timer
-
-;here we stop the VIC from making the interrupt request to the CPU:
-	ldr	r0,=VIC
-	mov	r1,#0
-	str	r1,[r0,#VectAddr]	; reset VIC
-
 ;change the mode
-	MRS R0, CPSR
-	LDR R1, =0x0000000F
-	ORR R0, R0, R1
-	MSR CPSR_cxsf, R0
+	;MRS R0, CPSR
+	;LDR R1, =0x0000000F
+	;ORR R0, R0, R1
+	;MSR CPSR_cxsf, R0
 
-	
 ;go to next thread in array if end go to begining
 	LDR R0, =threads
 	LDR R1, =threadIndex
@@ -197,12 +187,22 @@ endIterate
 	ADD R0, R0, R3
 	LDR R0, [R0]
 	;R0 is now the pointer to the next thread stack
-	MOV R1, R0
 	LDR R2, =13
 	LDR R4, [R0, R2, LSL #2] ;load the pc to R4
-	LDMFA R0, {R2 - R3}
+	LDMEA R0, {R2 - R3}
 	STMFD SP!, {R2 - R4} ; stores R0 - R1 and the PC
-	LDMFA R0, {R2 - R12} ;Load the saved registers of the thread stack
+	LDMEA R0, {R2 - R12} ;Load the saved registers of the thread stack
+	
+;this is where we stop the timer from making the interrupt request to the VIC
+	ldr	r0,=T0
+	mov	r1,#TimerResetTimer0Interrupt
+	str	r1,[r0,#IR]	   	; remove MR0 interrupt request from timer
+
+;here we stop the VIC from making the interrupt request to the CPU:
+	ldr	r0,=VIC
+	mov	r1,#0
+	str	r1,[r0,#VectAddr]	; reset VIC
+	
 	LDMFD SP!, {R0 - R1, PC} ;load the rest of the registers and change the program counter
 
 	AREA	Subroutines, CODE, READONLY
