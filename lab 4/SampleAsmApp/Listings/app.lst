@@ -322,7 +322,7 @@ ARM Macro Assembler    Page 5
   190 00000064 E3A0200D        LDR              R2, =13
   191 00000068 E7904102        LDR              R4, [R0, R2, LSL #2] 
                                                             ;load the pc to R4
-  192 0000006C E910000C        LDMEA            R0, {R2 - R3}
+  192 0000006C E8B0000C        LDMFD            R0!, {R2 - R3}
 
 
 
@@ -331,9 +331,9 @@ ARM Macro Assembler    Page 6
 
   193 00000070 E92D001C        STMFD            SP!, {R2 - R4} ; stores R0 - R1
                                                              and the PC
-  194 00000074 E9101FFC        LDMEA            R0, {R2 - R12} ;Load the saved 
-                                                            registers of the th
-                                                            read stack
+  194 00000074 E8B01FFC        LDMFD            R0!, {R2 - R12} ;Load the saved
+                                                             registers of the t
+                                                            hread stack
   195 00000078         
   196 00000078         ;this is where we stop the timer from making the interru
                        pt request to the VIC
@@ -349,10 +349,10 @@ ARM Macro Assembler    Page 6
   203 00000088 E3A01000        mov              r1,#0
   204 0000008C E5801030        str              r1,[r0,#VectAddr] ; reset VIC
   205 00000090         
-  206 00000090 E8BD8003        LDMFD            SP!, {R0 - R1, PC} ;load the re
-                                                            st of the registers
-                                                             and change the pro
-                                                            gram counter
+  206 00000090 E8FD8003        LDMFD            SP!, {R0 - R1, PC}^ ;load the r
+                                                            est of the register
+                                                            s and change the pr
+                                                            ogram counter
   207 00000094         
   208 00000094 00000000 
               00000000 
@@ -437,10 +437,10 @@ ARM Macro Assembler    Page 7
   224 000000C0         
   225 000000C0         
   226 000000C0                 END
-Command Line: --debug --xref --apcs=interwork --depend=.\app.d -o.\app.o -IC:\K
-eil\ARM\RV31\INC -IC:\Keil\ARM\CMSIS\Include -IC:\Keil\ARM\Inc\Philips --predef
-ine="__EVAL SETA 1" --predefine="__MICROLIB SETA 1" --list=.\listings\app.lst A
-pp.s
+Command Line: --debug --xref --diag_suppress=9931 --apcs=interwork --depend=.\a
+pp.d -o.\app.o -IC:\Keil_v5\ARM\RV31\INC -IC:\Keil_v5\ARM\CMSIS\Include -IC:\Ke
+il_v5\ARM\Inc\Philips --predefine="__EVAL SETA 1" --predefine="__MICROLIB SETA 
+1" --predefine="__UVISION_VERSION SETA 516" --list=.\listings\app.lst App.s
 
 
 
@@ -915,4 +915,4 @@ Symbol: main
       None
 Comment: main unused
 1 symbol
-386 symbols in table
+387 symbols in table

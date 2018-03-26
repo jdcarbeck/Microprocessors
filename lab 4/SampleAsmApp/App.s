@@ -76,8 +76,6 @@ start
 	str	r1,[r0,#TCR]
 
 
-
-
 ;thread0 will begin here the first time
 thread0Start
 	ldr	r1,=IO1DIR
@@ -106,8 +104,6 @@ dloop0	subs	R8,R8,#1
 	cmp	r3,r5
 	bne	floop
 	b	wloop
-
-
 
 
 ;thread1 will begin here the first time
@@ -189,9 +185,9 @@ endIterate
 	;R0 is now the pointer to the next thread stack
 	LDR R2, =13
 	LDR R4, [R0, R2, LSL #2] ;load the pc to R4
-	LDMEA R0, {R2 - R3}
+	LDMFD R0!, {R2 - R3}
 	STMFD SP!, {R2 - R4} ; stores R0 - R1 and the PC
-	LDMEA R0, {R2 - R12} ;Load the saved registers of the thread stack
+	LDMFD R0!, {R2 - R12} ;Load the saved registers of the thread stack
 	
 ;this is where we stop the timer from making the interrupt request to the VIC
 	ldr	r0,=T0
@@ -203,7 +199,7 @@ endIterate
 	mov	r1,#0
 	str	r1,[r0,#VectAddr]	; reset VIC
 	
-	LDMFD SP!, {R0 - R1, PC} ;load the rest of the registers and change the program counter
+	LDMFD SP!, {R0 - R1, PC}^ ;load the rest of the registers and change the program counter
 
 	AREA	Subroutines, CODE, READONLY
 
